@@ -195,12 +195,12 @@
             2: new Set([21,22,23,24,25,26,27,28,29]),
             3: new Set([31,32,33,34,35,36,37,38,39])
         },
-        COMBS: [[0,1], [0,2], [0,3], [1,2], [2,3]] // 1/3 is excluded
+        COMBS: [[0,1], [0,2], [0,3], [1,2], [2,3]] // 1/3 剔除
     };
 
     let AppState = { fullData: [], history: [], page: 1, chart: null, latestPrediction: null };
 
-    // --- 2. Data Module (含多節點 CORS 備援機制) ---
+    // --- 2. Data Module (含雙向 CORS 多節點備援機制) ---
     const Data = {
         async init() {
             try { 
@@ -211,30 +211,59 @@
             this.forceFetch();
         },
         async fetchCloud() {
-            UI.status("☁️ 同步雲端數據...", "loading");
-            try {
-                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${CONFIG.DRIVE_ID}`)}`);
-                const data = await res.json();
-                this.merge(data);
-            } catch(e) {}
-        },
-        async forceFetch() {
-            UI.status("📡 抓取最新開獎 (切換節點中)...", "loading");
-            let newData = [];
+            UI.status("☁️ 同步雲端歷史數據 (切換節點中)...", "loading");
+            const driveUrl = `https://drive.google.com/uc?export=download&id=${CONFIG.DRIVE_ID}`;
             
-            // 🔧 提供 3 種不同的 CORS 代理伺服器備援
+            // 🔧 雲端下載套用多節點備援機制
             const proxies = [
                 u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
                 u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
                 u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
             ];
 
-            // 抓取前 2 頁最新資料
+            let fetchedData = null;
+
+            for(let proxy of proxies) {
+                try {
+                    let fetchUrl = proxy(driveUrl);
+                    let res = await fetch(fetchUrl, { cache: "no-store" });
+                    
+                    if (!res.ok) continue;
+                    
+                    let text = await res.text();
+                    
+                    // 🛡️ 防呆驗證：確保代理伺服器回傳的是 JSON 陣列
+                    if (text.trim().startsWith("[") && text.trim().endsWith("]")) {
+                        fetchedData = JSON.parse(text);
+                        break; 
+                    }
+                } catch(e) {
+                    console.log("雲端節點抓取失敗，自動切換下一個...", e);
+                }
+            }
+
+            if (fetchedData && fetchedData.length > 0) {
+                this.merge(fetchedData);
+                console.log(`✅ 成功從雲端同步了 ${fetchedData.length} 筆資料`);
+            } else {
+                console.log("⚠️ 雲端資料庫抓取失敗，將僅依賴本機快取與即時爬蟲");
+            }
+        },
+        async forceFetch() {
+            UI.status("📡 抓取最新開獎 (切換節點中)...", "loading");
+            let newData = [];
+            
+            // 🔧 即時爬蟲套用多節點備援機制
+            const proxies = [
+                u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+                u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+                u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+            ];
+
             for(let i=1; i<=2; i++) {
                 let url = `${CONFIG.BASE_URL}?indexpage=${i}&orderby=new`;
                 let html = null;
                 
-                // 🔄 代理節點輪詢
                 for(let proxy of proxies) {
                     try {
                         let fetchUrl = proxy(url);
@@ -243,7 +272,6 @@
                         if (!res.ok) continue; 
                         
                         let txt = await res.text();
-                        // 確保抓回來的是正確的 HTML 表格內容
                         if(txt.includes("<table") && txt.length > 500) { 
                             html = txt; 
                             break; 
