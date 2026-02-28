@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>539 智能操盤系統 (v5.0 King Logic)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a; --glass-bg: rgba(30, 41, 59, 0.7); --glass-border: rgba(255, 255, 255, 0.08);
+            --primary: #6366f1; --secondary: #ec4899; --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+            --text-main: #f8fafc; --text-muted: #94a3b8; --card-radius: 16px;
+        }
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif; background-color: var(--bg-dark);
+            background-image: radial-gradient(at 0% 0%, rgba(99,102,241,0.15), transparent 50%), radial-gradient(at 100% 0%, rgba(236,72,153,0.15), transparent 50%);
+            color: var(--text-main); margin: 0; padding: 20px; box-sizing: border-box;
+        }
+        .container { max-width: 1200px; margin: 0 auto; display: grid; gap: 24px; }
+        
+        /* Components */
+        header { padding: 24px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--card-radius); backdrop-filter: blur(12px); text-align: center; position: relative; overflow: hidden; }
+        header::after { content:''; position: absolute; bottom:0; left:0; width:100%; height:2px; background: linear-gradient(90deg, var(--primary), var(--secondary)); }
+        h1 { margin: 0; background: linear-gradient(135deg, #fff, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 24px; font-weight: 700; }
+        .subtitle { font-size: 14px; color: var(--primary); margin-top: 5px; font-weight: 500; letter-spacing: 1px; }
+
+        /* Status & Controls */
+        .status-container { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; position: relative; overflow: hidden; margin-top: 10px; }
+        .status-bar-content { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; }
+        .status-progress-bar { height: 3px; width: 100%; background: rgba(255,255,255,0.05); position: absolute; bottom: 0; }
+        .status-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 0.3s; }
+        .indeterminate { width: 30%; animation: loading-bar 1.5s infinite linear; }
+        @keyframes loading-bar { 0% { left: -30%; } 100% { left: 100%; } }
+
+        .dashboard { display: grid; grid-template-columns: 1fr; gap: 24px; }
+        @media(min-width: 992px) { .dashboard { grid-template-columns: 1fr 1fr; } }
+        
+        .card { background: var(--glass-bg); padding: 24px; border-radius: var(--card-radius); border: 1px solid var(--glass-border); backdrop-filter: blur(16px); position: relative; display: flex; flex-direction: column; }
+        .card h2 { margin: 0 0 20px; font-size: 18px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .card-tag { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: linear-gradient(90deg, var(--primary), #818cf8); color: white; }
+
+        /* Inputs */
+        .control-row { display: flex; gap: 12px; margin-bottom: 15px; }
+        .unit-input-group { display: flex; align-items: center; gap: 10px; background: #1e293b; padding: 8px 15px; border-radius: 8px; border: 1px solid #475569; flex: 1; }
+        .unit-input { width: 60px; border: none; text-align: center; font-weight: 700; color: var(--warning); background: transparent; outline: none; font-size: 16px; }
+        .btn-action { border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white; transition: transform 0.2s; background: linear-gradient(135deg, var(--primary), #4f46e5); padding: 10px 20px; }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); }
+        .btn-reset { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 5px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; }
+        .btn-reset:hover { background: #ef4444; color: white; }
+
+        /* Stats Grid */
+        .strategy-box { background: rgba(15,23,42,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin-top: auto; }
+        .strategy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .stat-item { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; text-align: center; }
+        .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+        .stat-value { font-size: 18px; font-weight: 700; color: white; }
+        .val-win { color: var(--success); } .val-loss { color: var(--danger); }
+        
+        /* Signal Display */
+        .signal-display { text-align: center; padding: 20px 0; }
+        .sig-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+        .badge-5x { background: rgba(239,68,68,0.2); color: #fca5a5; border: 1px solid #ef4444; }
+        .badge-3x { background: rgba(245,158,11,0.2); color: #fcd34d; border: 1px solid #f59e0b; }
+        .badge-1x { background: rgba(16,185,129,0.2); color: #6ee7b7; border: 1px solid #10b981; }
+        .badge-wait { background: rgba(148,163,184,0.2); color: #cbd5e1; border: 1px solid #64748b; }
+
+        .sig-main { font-size: 32px; font-weight: 800; margin: 10px 0; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sig-desc { font-size: 14px; color: var(--text-muted); background: rgba(0,0,0,0.3); display: inline-block; padding: 5px 15px; border-radius: 8px; }
+        
+        .signal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
+        .priority-card { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; text-align: left; font-size: 12px; color: #64748b; border-left: 3px solid transparent; transition: 0.3s; }
+        .priority-card.active { background: rgba(99,102,241,0.1); border-left: 3px solid var(--primary); color: white; transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .p-rank { font-weight: bold; margin-right: 5px; }
+
+        /* Table */
+        .full-history-card { grid-column: 1 / -1; }
+        .history-table-container { overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; max-height: 500px; }
+        .full-history-table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: 14px; text-align: center; }
+        .full-history-table th { background: rgba(30,41,59,0.9); padding: 14px; color: var(--text-muted); position: sticky; top: 0; z-index: 2; }
+        .full-history-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); color: #e2e8f0; }
+        .full-history-table tr:hover { background: rgba(255,255,255,0.02); }
+        
+        .num-ball { display: inline-block; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; font-size: 12px; margin: 0 2px; color: #94a3b8; background: #1e293b; font-weight: bold; }
+        .res-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 800; }
+        .badge-win { background: rgba(16,185,129,0.15); color: #34d399; } .badge-loss { background: rgba(239,68,68,0.15); color: #f87171; }
+
+        /* Chart */
+        .chart-container { position: relative; height: 350px; width: 100%; margin-top: 10px; }
+        #manualInputSection { display: none; margin-top: 10px; padding: 15px; background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 8px; text-align: center; }
+        .spin { animation: spin 1s linear infinite; } @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>539 智能操盤系統</h1>
+        <div class="subtitle">The Ultimate Dual-Engine Strategy v2.0 (King Logic)</div>
+    </header>
+
+    <div class="status-container">
+        <div class="status-bar-content">
+            <div>
+                <div id="statusText" style="font-weight:600;">⏳ 系統啟動中...</div>
+                <div id="dataInfoBlock" style="font-size:12px; color:var(--text-muted);"></div>
+            </div>
+            <button class="btn-reset" onclick="App.resetData()">🔄 清除快取重抓</button>
+        </div>
+        <div class="status-progress-bar"><div class="status-progress-fill" id="statusProgressBar"></div></div>
+    </div>
+
+    <div id="manualInputSection">
+        <p style="color:#fca5a5; font-weight:bold; margin-bottom:10px;">⚠️ 無法抓取最新資料，請手動輸入：</p>
+        <div style="display:flex; justify-content:center; gap:5px; margin-bottom:10px;">
+            <input type="number" id="m1" style="width:40px; padding:5px;"><input type="number" id="m2" style="width:40px; padding:5px;">
+            <input type="number" id="m3" style="width:40px; padding:5px;"><input type="number" id="m4" style="width:40px; padding:5px;">
+            <input type="number" id="m5" style="width:40px; padding:5px;">
+        </div>
+        <button class="btn-action" onclick="App.manualInput()">確認輸入</button>
+    </div>
+
+    <div class="dashboard">
+        <div class="card">
+            <h2><span>💰 策略回測面板</span><span class="card-tag">Verified v2.0</span></h2>
+            
+            <div class="control-row">
+                <div class="unit-input-group">
+                    <span style="font-size:13px; color:#cbd5e1;">基本單位成本 ($):</span>
+                    <input type="number" id="baseUnit" class="unit-input" value="1" min="0.1" step="0.1">
+                </div>
+                <button class="btn-action" onclick="App.runAnalysis()">⚡ 執行回測</button>
+            </div>
+
+            <div class="strategy-box">
+                <div class="strategy-grid">
+                    <div class="stat-item"><div class="stat-label">累積淨利 (Net)</div><div class="stat-value" id="st-profit">--</div></div>
+                    <div class="stat-item"><div class="stat-label">ROI</div><div class="stat-value" id="st-roi">--%</div></div>
+                    <div class="stat-item"><div class="stat-label">勝率</div><div class="stat-value" id="st-winrate">--%</div></div>
+                    <div class="stat-item"><div class="stat-label">最大回撤 (MDD)</div><div class="stat-value val-loss" id="st-mdd">--</div></div>
+                </div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:15px; text-align:center; line-height:1.5;">
+                    策略核心：斷龍反彈 (Rebound) × 連莊追擊 (Chase)<br>
+                    資金權重：5倍 (重注) / 3倍 (加碼) / 1倍 (流水)
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2><span>🔮 下一期操盤指令</span><span class="card-tag" style="background:#ec4899;">Action</span></h2>
+            
+            <div style="text-align:center; margin-bottom:15px;">
+                <div style="font-size:12px; color:var(--text-muted);">參考數據日: <span id="last-bet-date" style="color:var(--primary);">--/--</span></div>
+                <div id="nextDrawDate" style="font-size:20px; font-weight:800; color:white;">--/--</div>
+            </div>
+
+            <div class="signal-display">
+                <div id="pred-badge" class="sig-badge badge-wait">等待計算</div>
+                <div id="pred-strategy" class="sig-main">--</div>
+                <div id="pred-desc" class="sig-desc">系統初始化中...</div>
+            </div>
+
+            <div class="signal-grid">
+                <div class="priority-card" id="p1">
+                    <div class="p-rank">P1. 重注 (5x)</div> 2頭斷3期 -> 01策略
+                </div>
+                <div class="priority-card" id="p2">
+                    <div class="p-rank">P2. 重注 (5x)</div> 0頭斷2期 -> 02策略
+                </div>
+                <div class="priority-card" id="p3">
+                    <div class="p-rank">P3. 加碼 (3x)</div> 0頭斷3期 -> 03策略
+                </div>
+                <div class="priority-card" id="p4">
+                    <div class="p-rank">P4. 加碼 (3x)</div> 2頭斷2期 -> 01策略
+                </div>
+                <div class="priority-card" id="p5">
+                    <div class="p-rank">P5. 流水 (1x)</div> 1頭連4期 -> 01策略
+                </div>
+                <div class="priority-card" id="p6">
+                    <div class="p-rank">P6. 流水 (1x)</div> 2頭連2期 -> 02策略
+                </div>
+                <div class="priority-card" id="p7">
+                    <div class="p-rank">P7. 流水 (1x)</div> 0頭連2期 -> 02策略
+                </div>
+                <div class="priority-card" id="p8">
+                    <div class="p-rank">P8. 流水 (1x)</div> 1頭剛斷1 -> 23策略
+                </div>
+            </div>
+        </div>
+        
+        <div class="card full-history-card">
+            <h2><span>📈 資金權益曲線 (Equity Curve)</span></h2>
+            <div class="chart-container"><canvas id="equityChart"></canvas></div>
+        </div>
+
+        <div class="card full-history-card">
+            <h2><span>📜 詳細交易紀錄</span></h2>
+            <div class="history-table-container">
+                <table class="full-history-table">
+                    <thead><tr><th>日期</th><th>開獎號碼</th><th>觸發訊號 (優先級)</th><th>策略/倍數</th><th>損益</th><th>結果</th></tr></thead>
+                    <tbody id="fullHistoryBody"></tbody>
+                </table>
+            </div>
+            <div style="display:flex; justify-content:center; gap:15px; margin-top:20px;">
+                <button onclick="UI.changePage(-1)" style="padding:5px 15px; cursor:pointer; background:#334155; border:none; color:white; border-radius:4px;">◀ 上一頁</button>
+                <span id="pageInfo" style="line-height:30px; font-size:14px;">1 / 1</span>
+                <button onclick="UI.changePage(1)" style="padding:5px 15px; cursor:pointer; background:#334155; border:none; color:white; border-radius:4px;">下一頁 ▶</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. Constants & Config ---
+    const $ = id => document.getElementById(id);
+    const CONFIG = {
+        DRIVE_ID: '1K2CNRIE97NRfJrzKiG8Adcz_tFeYHPlm', // 預設 Google Drive ID
+        STORAGE_KEY: 'lotto539_v5_king',
+        BASE_URL: "https://www.lotto-8.com/listlto539.asp",
+        COST: 1062,
+        PRIZE_3: 1710,
+        PRIZE_4: 2280,
+        HEADS: { 
+            0: new Set([1,2,3,4,5,6,7,8,9]),
+            1: new Set([11,12,13,14,15,16,17,18,19]),
+            2: new Set([21,22,23,24,25,26,27,28,29]),
+            3: new Set([31,32,33,34,35,36,37,38,39])
+        },
+        SPECIALS: new Set([10, 20, 30])
+    };
+
+    let AppState = { fullData: [], history: [], page: 1, chart: null };
+
+    // --- 2. Data Module (Fetch & Parse) ---
+    const Data = {
+        async init() {
+            try { 
+                const cached = localStorage.getItem(CONFIG.STORAGE_KEY);
+                AppState.fullData = cached ? JSON.parse(cached) : [];
+            } catch(e){ AppState.fullData = []; }
+
+            // Always try to fetch new data
+            if(AppState.fullData.length === 0) await this.fetchCloud();
+            this.forceFetch();
+        },
+        async fetchCloud() {
+            UI.status("☁️ 同步雲端數據...", "loading");
+            try {
+                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${CONFIG.DRIVE_ID}`)}`);
+                const data = await res.json();
+                this.merge(data);
+            } catch(e) { console.log("Cloud fetch failed", e); }
+        },
+        async forceFetch() {
+            UI.status("📡 抓取最新開獎...", "loading");
+            let newData = [];
+            const proxies = [
+                u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}&timestamp=${Date.now()}`,
+                u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+            ];
+
+            // Try first 2 pages
+            for(let i=1; i<=2; i++) {
+                let url = `${CONFIG.BASE_URL}?indexpage=${i}&orderby=new`;
+                let html = null;
+                for(let proxy of proxies) {
+                    try {
+                        let res = await fetch(proxy(url));
+                        let txt = res.url.includes("allorigins") ? (await res.json()).contents : await res.text();
+                        if(txt.length > 500) { html = txt; break; }
+                    } catch(e){}
+                }
+                if(html) {
+                    let parsed = this.parseHtml(html);
+                    if(parsed.length) newData.push(...parsed);
+                }
+            }
+
+            if(newData.length > 0) {
+                this.merge(newData);
+                UI.status(`✅ 更新完成`, "success");
+                App.runEngine();
+            } else if (AppState.fullData.length > 0) {
+                UI.status("✅ 資料已是最新", "success");
+                App.runEngine();
+            } else {
+                UI.status("⚠️ 連線異常，請手動輸入", "error");
+                $('manualInputSection').style.display = 'block';
+            }
+        },
+        merge(newData) {
+            const map = new Map();
+            [...newData, ...AppState.fullData].forEach(d => map.set(d.date, d));
+            AppState.fullData = Array.from(map.values()).sort((a,b) => b.date.localeCompare(a.date));
+            localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(AppState.fullData));
+            UI.updateInfo();
+        },
+        parseHtml(html) {
+            const doc = new DOMParser().parseFromString(html, "text/html");
+            let res = [];
+            doc.querySelectorAll("tr").forEach(row => {
+                const txt = row.innerText.trim();
+                const dMatch = txt.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+                if(dMatch) {
+                    let allNums = txt.match(/\d{2}/g) || [];
+                    let valid = [];
+                    for(let i=allNums.length-1; i>=0; i--) {
+                        let n = parseInt(allNums[i]);
+                        if(n>=1 && n<=39 && !valid.includes(n)) valid.unshift(n);
+                        if(valid.length===5) break;
+                    }
+                    if(valid.length===5) res.push({ 
+                        date: `${dMatch[1]}/${dMatch[2].padStart(2,'0')}/${dMatch[3].padStart(2,'0')}`, 
+                        numbers: valid 
+                    });
+                }
+            });
+            return res;
+        }
+    };
+
+    // --- 3. The King Logic Engine (v2.0 Core) ---
+    const Engine = {
+        calcProfit(drawNums, stratName) {
+            if(!stratName) return -CONFIG.COST;
+            const h1 = int(stratName[0]), h2 = int(stratName[1]);
+            let c1 = 0, c2 = 0;
+            
+            drawNums.forEach(n => {
+                if(CONFIG.HEADS[h1].has(n)) c1++;
+                else if(CONFIG.HEADS[h2].has(n)) c2++;
+            });
+            let p3 = 5 - c1 - c2;
+            
+            if(c1>0 && c2>0 && p3>0) {
+                let dist = [c1, c2, p3].sort((a,b)=>a-b);
+                if(dist[0]===1 && dist[1]===2 && dist[2]===2) return CONFIG.PRIZE_4 - CONFIG.COST;
+                if(dist[0]===1 && dist[1]===1 && dist[2]===3) return CONFIG.PRIZE_3 - CONFIG.COST;
+            }
+            return -CONFIG.COST;
+        },
+        run(unitMultiplier) {
+            // Need data Old -> New for simulation
+            let simData = [...AppState.fullData].reverse(); 
+            let miss = {0:0, 1:0, 2:0, 3:0}, hit = {0:0, 1:0, 2:0, 3:0};
+            let history = [], capital = 0, maxDD = 0, peak = 0;
+
+            simData.forEach(d => {
+                const nums = d.numbers;
+                let strat = null, mult = 0, pRank = 0, desc = "";
+
+                // --- 8 Priorities Logic ---
+                if (miss[2] >= 3)       { strat='01'; mult=5; pRank=1; desc="2頭斷3期"; }
+                else if (miss[0] == 2)  { strat='02'; mult=5; pRank=2; desc="0頭斷2期"; }
+                else if (miss[0] >= 3)  { strat='03'; mult=3; pRank=3; desc="0頭斷3期+"; }
+                else if (miss[2] == 2)  { strat='01'; mult=3; pRank=4; desc="2頭斷2期"; }
+                else if (hit[1] >= 4)   { strat='01'; mult=1; pRank=5; desc="1頭連4期+"; }
+                else if (hit[2] >= 2)   { strat='02'; mult=1; pRank=6; desc="2頭連2期+"; }
+                else if (hit[0] >= 2)   { strat='02'; mult=1; pRank=7; desc="0頭連2期+"; }
+                else if (miss[1] == 1)  { strat='23'; mult=1; pRank=8; desc="1頭剛斷1"; }
+
+                // Calculate Profit
+                let profit = 0, cost = 0;
+                if(mult > 0) {
+                    let unitP = this.calcProfit(nums, strat);
+                    profit = unitP * mult * unitMultiplier;
+                    cost = CONFIG.COST * mult * unitMultiplier;
+                    capital += profit;
+                }
+                
+                // Track Drawdown
+                if(capital > peak) peak = capital;
+                let dd = capital - peak;
+                if(dd < maxDD) maxDD = dd;
+
+                // Log
+                history.push({
+                    date: d.date, nums, strat, mult, profit, cost, 
+                    capital, pRank, desc, isWin: profit > 0
+                });
+
+                // Update Streaks
+                let counts = {0:0, 1:0, 2:0, 3:0};
+                nums.forEach(n => {
+                    if(!CONFIG.SPECIALS.has(n)) {
+                        for(let h=0; h<=3; h++) if(CONFIG.HEADS[h].has(n)) counts[h]++;
+                    }
+                });
+                for(let h=0; h<=3; h++) {
+                    if(counts[h]===0) { miss[h]++; hit[h]=0; }
+                    else { miss[h]=0; hit[h]++; }
+                }
+            });
+
+            // Return latest state for prediction
+            return { history: history.reverse(), stats: { capital, maxDD }, nextState: {miss, hit} };
+        }
+    };
+    
+    // Helper
+    const int = x => parseInt(x);
+
+    // --- 4. UI Module ---
+    const UI = {
+        status(msg, type) {
+            $('statusText').innerText = msg;
+            let bar = $('statusProgressBar');
+            bar.className = type==='loading' ? 'status-progress-fill indeterminate' : 'status-progress-fill';
+            bar.style.width = type==='loading' ? '30%' : '100%';
+            if(type!=='loading') setTimeout(()=>bar.style.width='0%', 1000);
+        },
+        updateInfo() {
+            if(AppState.fullData.length) {
+                $('dataInfoBlock').innerHTML = `數據範圍: ${AppState.fullData[AppState.fullData.length-1].date} ~ ${AppState.fullData[0].date} (共 ${AppState.fullData.length} 期)`;
+            }
+        },
+        renderStats(res) {
+            const h = res.history;
+            const trades = h.filter(x => x.mult > 0);
+            const wins = trades.filter(x => x.isWin);
+            
+            $('st-profit').innerText = `$${parseInt(res.stats.capital).toLocaleString()}`;
+            $('st-profit').className = res.stats.capital > 0 ? "stat-value val-win" : "stat-value val-loss";
+            
+            let totalCost = h.reduce((acc, cur) => acc + cur.cost, 0);
+            $('st-roi').innerText = totalCost ? ((res.stats.capital / totalCost) * 100).toFixed(2) + '%' : '0%';
+            
+            $('st-winrate').innerText = trades.length ? ((wins.length / trades.length) * 100).toFixed(2) + '%' : '0%';
+            $('st-mdd').innerText = parseInt(res.stats.maxDD).toLocaleString();
+        },
+        renderPrediction(state) {
+            // Predict based on nextState (miss/hit)
+            const m = state.miss, h = state.hit;
+            let strat='--', mult=0, pRank=0, desc="無訊號";
+            let badgeClass = "badge-wait", badgeTxt = "休息";
+
+            // Same Logic as Engine
+            if (m[2] >= 3)       { strat='01策略'; mult=5; pRank=1; desc="2頭斷3期"; badgeClass="badge-5x"; badgeTxt="重注"; }
+            else if (m[0] == 2)  { strat='02策略'; mult=5; pRank=2; desc="0頭斷2期"; badgeClass="badge-5x"; badgeTxt="重注"; }
+            else if (m[0] >= 3)  { strat='03策略'; mult=3; pRank=3; desc="0頭斷3期+"; badgeClass="badge-3x"; badgeTxt="加碼"; }
+            else if (m[2] == 2)  { strat='01策略'; mult=3; pRank=4; desc="2頭斷2期"; badgeClass="badge-3x"; badgeTxt="加碼"; }
+            else if (h[1] >= 4)  { strat='01策略'; mult=1; pRank=5; desc="1頭連4期+"; badgeClass="badge-1x"; badgeTxt="流水"; }
+            else if (h[2] >= 2)  { strat='02策略'; mult=1; pRank=6; desc="2頭連2期+"; badgeClass="badge-1x"; badgeTxt="流水"; }
+            else if (h[0] >= 2)  { strat='02策略'; mult=1; pRank=7; desc="0頭連2期+"; badgeClass="badge-1x"; badgeTxt="流水"; }
+            else if (m[1] == 1)  { strat='23策略'; mult=1; pRank=8; desc="1頭剛斷1"; badgeClass="badge-1x"; badgeTxt="流水"; }
+
+            $('pred-badge').className = `sig-badge ${badgeClass}`;
+            $('pred-badge').innerText = badgeTxt;
+            $('pred-strategy').innerText = mult > 0 ? `${strat} (x${mult})` : "暫停操作";
+            $('pred-desc').innerText = desc;
+            
+            // Highlight Priority Card
+            document.querySelectorAll('.priority-card').forEach(el => el.classList.remove('active'));
+            if(pRank > 0) document.getElementById(`p${pRank}`).classList.add('active');
+
+            // Dates
+            if(AppState.fullData.length) {
+                $('last-bet-date').innerText = AppState.fullData[0].date;
+                let d = new Date(AppState.fullData[0].date);
+                d.setDate(d.getDate() + 1); if(d.getDay()===0) d.setDate(d.getDate()+1);
+                $('nextDrawDate').innerText = `${d.getMonth()+1}/${d.getDate()} (週${"日一二三四五六"[d.getDay()]})`;
+            }
+        },
+        renderTable() {
+            const t = $('fullHistoryBody'); t.innerHTML = '';
+            const start = (AppState.page-1)*10, end = Math.min(start+10, AppState.history.length);
+            $('pageInfo').innerText = `第 ${AppState.page} 頁 / 共 ${Math.ceil(AppState.history.length/10) || 1} 頁`;
+
+            for(let i=start; i<end; i++) {
+                let row = AppState.history[i];
+                let balls = row.nums.map(n => `<span class="num-ball">${n<10?'0'+n:n}</span>`).join('');
+                let pTag = row.pRank > 0 ? `<span style="color:${row.mult>=5?'#fca5a5':(row.mult>=3?'#fcd34d':'#cbd5e1')}">P${row.pRank}. ${row.desc}</span>` : '無';
+                let resHtml = row.mult > 0 ? `<span class="res-badge ${row.isWin?'badge-win':'badge-loss'}">${row.isWin?'WIN':'LOSS'}</span>` : '-';
+                
+                t.innerHTML += `
+                    <tr>
+                        <td style="color:#94a3b8">${row.date.slice(5)}</td>
+                        <td>${balls}</td>
+                        <td>${pTag}</td>
+                        <td>${row.strat || '-'} <small style="color:#64748b">${row.mult>0 ? 'x'+row.mult : ''}</small></td>
+                        <td style="font-weight:bold; color:${row.profit>0?'#34d399':(row.profit<0?'#f87171':'#64748b')}">${parseInt(row.profit)}</td>
+                        <td>${resHtml}</td>
+                    </tr>
+                `;
+            }
+        },
+        renderChart() {
+            if(AppState.chart) AppState.chart.destroy();
+            let data = AppState.history.slice().reverse().map(d => d.capital);
+            let labels = AppState.history.slice().reverse().map(d => d.date);
+
+            const ctx = $('equityChart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0,0,0,300);
+            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.5)'); gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+            AppState.chart = new Chart(ctx, {
+                type: 'line',
+                data: { 
+                    labels, 
+                    datasets: [{ 
+                        label:'累積淨利', data, 
+                        borderColor: '#818cf8', backgroundColor: gradient, 
+                        fill: true, borderWidth:2, pointRadius:0, tension:0.1 
+                    }] 
+                },
+                options: { 
+                    responsive:true, maintainAspectRatio:false, 
+                    plugins:{ legend:{display:false} }, 
+                    scales:{ 
+                        x:{grid:{display:false}, ticks:{callback:v=>labels[v].slice(0,4), maxTicksLimit:8}}, 
+                        y:{grid:{color:'rgba(255,255,255,0.05)'}} 
+                    } 
+                }
+            });
+        },
+        changePage(d) {
+            let max = Math.ceil(AppState.history.length/10);
+            AppState.page = Math.min(Math.max(1, AppState.page+d), max);
+            this.renderTable();
+        }
+    };
+
+    // --- 5. Main Controller ---
+    const App = {
+        init() { Data.init(); },
+        runEngine() {
+            let unit = parseFloat($('baseUnit').value) || 1;
+            let result = Engine.run(unit);
+            AppState.history = result.history;
+            AppState.page = 1;
+            
+            UI.renderStats(result);
+            UI.renderPrediction(result.nextState);
+            UI.renderTable();
+            UI.renderChart();
+        },
+        runAnalysis() { this.runEngine(); },
+        resetData() {
+            if(confirm("確定要清除所有快取資料並重新下載嗎？")) {
+                localStorage.removeItem(CONFIG.STORAGE_KEY);
+                AppState.fullData = [];
+                Data.init();
+            }
+        },
+        manualInput() {
+            let nums = [1,2,3,4,5].map(i => parseInt($(`m${i}`).value));
+            if(nums.some(isNaN)) return alert("請輸入完整5個號碼");
+            let today = new Date().toISOString().split('T')[0].replace(/-/g,'/');
+            AppState.fullData.unshift({date: today, numbers: nums});
+            Data.merge([]); 
+            $('manualInputSection').style.display='none';
+            this.runEngine();
+        }
+    };
+
+    window.onload = () => App.init();
+</script>
+</body>
+</html>
