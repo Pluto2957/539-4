@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>539 智能操盤系統 (v4.0 3D雙核版)</title>
+    <title>539 智能操盤系統 (v5.0 3D雙核平注版)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -56,9 +56,8 @@
         
         .signal-display { text-align: center; padding: 20px 0; }
         .sig-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
-        .badge-pursuit { background: rgba(239,68,68,0.2); color: #fca5a5; border: 1px solid #ef4444; }
+        .badge-pursuit { background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid #10b981; }
         .badge-wait { background: rgba(148,163,184,0.2); color: #cbd5e1; border: 1px solid #64748b; }
-        .badge-lock { background: rgba(245,158,11,0.2); color: #fcd34d; border: 1px solid #f59e0b; }
 
         .sig-main { font-size: 32px; font-weight: 800; margin: 10px 0; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .sig-desc { font-size: 14px; color: var(--text-muted); background: rgba(0,0,0,0.3); display: inline-block; padding: 5px 15px; border-radius: 8px; line-height: 1.5; }
@@ -88,7 +87,7 @@
 <div class="container">
     <header>
         <h1>539 智能操盤系統</h1>
-        <div class="subtitle">3D 動態均值回歸引擎 (雙核並行 x 1-3-8 追擊)</div>
+        <div class="subtitle">3D 動態均值回歸引擎 (雙核平注版 Max 2)</div>
     </header>
 
     <div class="status-container">
@@ -114,7 +113,7 @@
 
     <div class="dashboard">
         <div class="card">
-            <h2><span>💰 策略回測面板</span><span class="card-tag">Verified v4.0</span></h2>
+            <h2><span>💰 平注法回測面板</span><span class="card-tag">Verified v5.0</span></h2>
             
             <div class="control-row">
                 <div class="unit-input-group">
@@ -128,18 +127,18 @@
                 <div class="strategy-grid">
                     <div class="stat-item"><div class="stat-label">累積淨利 (Net)</div><div class="stat-value" id="st-profit">--</div></div>
                     <div class="stat-item"><div class="stat-label">總進場次數</div><div class="stat-value" id="st-pursuits">--</div></div>
-                    <div class="stat-item"><div class="stat-label">系統勝率</div><div class="stat-value" id="st-winrate">--%</div></div>
+                    <div class="stat-item"><div class="stat-label">真實勝率</div><div class="stat-value" id="st-winrate">--%</div></div>
                     <div class="stat-item"><div class="stat-label">最大回撤 (MDD)</div><div class="stat-value val-loss" id="st-mdd">--</div></div>
                 </div>
                 <div style="font-size:12px; color:var(--text-muted); margin-top:15px; text-align:center; line-height:1.5;">
-                    核心戰略：3D 動態評分 (滿50分進場) + 雙核並行 (Max: 2)<br>
-                    資金控管：1倍 ➔ 3倍 ➔ 8倍 (單次停損準備金 12,744)
+                    核心戰略：3D 動態評分 (滿50分進場) + 每日獨立結算<br>
+                    資金控管：雙核平注 (每日最多2注，每注固定 1,062 元，絕不倍投)
                 </div>
             </div>
         </div>
 
         <div class="card">
-            <h2><span>🔮 下一期操盤指令</span><span class="card-tag" style="background:#ec4899;">Action</span></h2>
+            <h2><span>🔮 明日操盤指令</span><span class="card-tag" style="background:#ec4899;">Action</span></h2>
             
             <div style="text-align:center; margin-bottom:15px;">
                 <div style="font-size:12px; color:var(--text-muted);">參考數據日: <span id="last-bet-date" style="color:var(--primary);">--/--</span></div>
@@ -162,10 +161,10 @@
         </div>
 
         <div class="card full-history-card">
-            <h2><span>📜 詳細交易紀錄 (僅顯示有交易之期數)</span></h2>
+            <h2><span>📜 詳細交易紀錄 (每日獨立結算)</span></h2>
             <div class="history-table-container">
                 <table class="full-history-table">
-                    <thead><tr><th>日期</th><th>開獎號碼</th><th>追擊訊號</th><th>執行階段/倍數</th><th>損益</th><th>結算</th></tr></thead>
+                    <thead><tr><th>日期</th><th>開獎號碼</th><th>達標組合</th><th>評分細節</th><th>損益</th><th>結算</th></tr></thead>
                     <tbody id="fullHistoryBody"></tbody>
                 </table>
             </div>
@@ -183,11 +182,10 @@
     const $ = id => document.getElementById(id);
     const CONFIG = {
         DRIVE_ID: '1K2CNRIE97NRfJrzKiG8Adcz_tFeYHPlm',
-        STORAGE_KEY: 'lotto539_v4_3d_engine',
+        STORAGE_KEY: 'lotto539_v5_flatbet',
         BASE_URL: "https://www.lotto-8.com/listlto539.asp",
-        COST: 1062, PRIZE_3: 1710, PRIZE_4: 2280,
-        MULTIPLIERS: [1, 3, 8],
-        MAX_CONCURRENT: 2,
+        FLAT_COST: 1062, PRIZE_3: 1710, PRIZE_4: 2280,
+        MAX_DAILY_SIGNALS: 2, // 雙核限制
         THRESHOLD: 50,
         HEADS: { 
             0: new Set([1,2,3,4,5,6,7,8,9]),
@@ -195,12 +193,12 @@
             2: new Set([21,22,23,24,25,26,27,28,29]),
             3: new Set([31,32,33,34,35,36,37,38,39])
         },
-        COMBS: [[0,1], [0,2], [0,3], [1,2], [2,3]] // 1/3 剔除
+        COMBS: [[0,1], [0,2], [0,3], [1,2], [2,3]] // 1/3頭 剔除
     };
 
-    let AppState = { fullData: [], history: [], page: 1, chart: null, latestPrediction: null };
+    let AppState = { fullData: [], history: [], page: 1, chart: null, latestSignals: [] };
 
-    // --- 2. Data Module (含雙向 CORS 多節點備援機制) ---
+    // --- 2. Data Module ---
     const Data = {
         async init() {
             try { 
@@ -211,10 +209,8 @@
             this.forceFetch();
         },
         async fetchCloud() {
-            UI.status("☁️ 同步雲端歷史數據 (切換節點中)...", "loading");
+            UI.status("☁️ 同步雲端歷史數據...", "loading");
             const driveUrl = `https://drive.google.com/uc?export=download&id=${CONFIG.DRIVE_ID}`;
-            
-            // 🔧 雲端下載套用多節點備援機制
             const proxies = [
                 u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
                 u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
@@ -222,65 +218,38 @@
             ];
 
             let fetchedData = null;
-
             for(let proxy of proxies) {
                 try {
-                    let fetchUrl = proxy(driveUrl);
-                    let res = await fetch(fetchUrl, { cache: "no-store" });
-                    
+                    let res = await fetch(proxy(driveUrl), { cache: "no-store" });
                     if (!res.ok) continue;
-                    
                     let text = await res.text();
-                    
-                    // 🛡️ 防呆驗證：確保代理伺服器回傳的是 JSON 陣列
                     if (text.trim().startsWith("[") && text.trim().endsWith("]")) {
-                        fetchedData = JSON.parse(text);
-                        break; 
+                        fetchedData = JSON.parse(text); break; 
                     }
-                } catch(e) {
-                    console.log("雲端節點抓取失敗，自動切換下一個...", e);
-                }
+                } catch(e) {}
             }
 
-            if (fetchedData && fetchedData.length > 0) {
-                this.merge(fetchedData);
-                console.log(`✅ 成功從雲端同步了 ${fetchedData.length} 筆資料`);
-            } else {
-                console.log("⚠️ 雲端資料庫抓取失敗，將僅依賴本機快取與即時爬蟲");
-            }
+            if (fetchedData) this.merge(fetchedData);
         },
         async forceFetch() {
-            UI.status("📡 抓取最新開獎 (切換節點中)...", "loading");
+            UI.status("📡 抓取最新開獎...", "loading");
             let newData = [];
-            
-            // 🔧 即時爬蟲套用多節點備援機制
             const proxies = [
                 u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-                u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-                u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`
+                u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
             ];
 
             for(let i=1; i<=2; i++) {
                 let url = `${CONFIG.BASE_URL}?indexpage=${i}&orderby=new`;
                 let html = null;
-                
                 for(let proxy of proxies) {
                     try {
-                        let fetchUrl = proxy(url);
-                        let res = await fetch(fetchUrl, { cache: "no-store" }); 
-                        
+                        let res = await fetch(proxy(url), { cache: "no-store" }); 
                         if (!res.ok) continue; 
-                        
                         let txt = await res.text();
-                        if(txt.includes("<table") && txt.length > 500) { 
-                            html = txt; 
-                            break; 
-                        }
-                    } catch(e) {
-                        console.log("代理節點失效，自動切換下一個備援...", e);
-                    }
+                        if(txt.includes("<table") && txt.length > 500) { html = txt; break; }
+                    } catch(e) {}
                 }
-                
                 if(html) {
                     let parsed = this.parseHtml(html);
                     if(parsed.length) newData.push(...parsed);
@@ -291,9 +260,9 @@
                 this.merge(newData);
                 UI.status(`✅ 更新完成`, "success");
             } else if (AppState.fullData.length > 0) {
-                UI.status("✅ 資料已是最新 (線上節點壅塞，沿用本機快取)", "success");
+                UI.status("✅ 資料已是最新", "success");
             } else {
-                UI.status("⚠️ 代理節點全數異常，請手動輸入", "error");
+                UI.status("⚠️ 代理節點異常，請手動輸入", "error");
                 $('manualInputSection').style.display = 'block';
             }
             App.runEngine();
@@ -329,7 +298,7 @@
         }
     };
 
-    // --- 3. The 3D Dual-Core Engine (1-3-8) ---
+    // --- 3. The 3D Dual-Core Engine (Flat Betting) ---
     const Engine = {
         isWin(numsArr, comb) {
             let c1=0, c2=0;
@@ -354,18 +323,16 @@
             return broken;
         },
         calcScore(history, currentIndex, comb, prevBroken) {
-            // Drought
+            // Drought (Base Score)
             let dr = 0;
             let idx = currentIndex;
             while(idx >= 0 && !this.isWin(history[idx].numbers, comb).won) {
                 dr++; idx--;
             }
-            
-            // Base
             let base = 0;
             if(dr===3) base=10; else if(dr===4) base=30; else if(dr===5) base=40; else if(dr>=6) base=50;
             
-            // Bonus
+            // Pattern Bonus
             let bonus = 0;
             if(prevBroken.includes(0)) {
                 if(comb[0]===1 && comb[1]===2) bonus=Math.max(bonus,40);
@@ -378,7 +345,7 @@
             }
             if(prevBroken.includes(3) && comb[0]===0 && comb[1]===1) bonus=Math.max(bonus,20);
             
-            // Trend (Lookback 20)
+            // Trend Modifier (Lookback 20)
             let missCount = 0;
             let startIdx = Math.max(0, currentIndex - 19);
             for(let j=startIdx; j<=currentIndex; j++) {
@@ -386,9 +353,9 @@
             }
             
             let trend = 0;
-            let trendDesc = `⚪ 正常 (${missCount}次)`;
-            if(missCount>=12) { trend=10; trendDesc=`🔴 超賣 (+10分, 槓${missCount}次)`; }
-            else if(missCount<=7) { trend=-10; trendDesc=`🔵 超買 (-10分, 槓${missCount}次)`; }
+            let trendDesc = `⚪ 正常(${missCount})`;
+            if(missCount>=12) { trend=10; trendDesc=`🔴 超賣(${missCount})`; }
+            else if(missCount<=7) { trend=-10; trendDesc=`🔵 超買(${missCount})`; }
             
             return { total: base+bonus+trend, base, bonus, trend, trendDesc, dr };
         },
@@ -396,86 +363,39 @@
             let simData = [...AppState.fullData].reverse(); 
             if(simData.length < 20) return null;
 
-            let active_pursuits = []; 
             let historyLog = [];
             let daily_pnl = new Array(simData.length).fill(0);
-            
             let stats = { pursuits:0, wins:0, losses:0 };
+            
+            // 由於平注無跨日追蹤，我們直接將每一天視為獨立運算
+            // 變數 pending_bets 用來存放前一天掃描出來「今天要下注」的目標
+            let pending_bets = []; 
 
             for(let i=20; i<simData.length; i++) {
                 let dailyTrades = [];
-                let next_active = [];
                 
-                // 1. Resolve active pursuits today
-                for(let p of active_pursuits) {
-                    let cStr = `${p.comb[0]}/${p.comb[1]}`;
-                    let mult = CONFIG.MULTIPLIERS[p.step];
-                    let cost = CONFIG.COST * mult;
-                    
+                // 1. 結算今天的下注
+                for(let bet of pending_bets) {
+                    let cost = CONFIG.FLAT_COST;
                     daily_pnl[i] -= cost;
-                    let res = this.isWin(simData[i].numbers, p.comb);
+                    let res = this.isWin(simData[i].numbers, bet.comb);
                     
                     let tradeLog = {
-                        combStr: cStr, step: p.step, mult,
-                        cost, rev:0, net: -cost, won: false
+                        combStr: `${bet.comb[0]}/${bet.comb[1]}頭`, 
+                        details: bet.details,
+                        cost: cost, rev: 0, net: -cost, won: false
                     };
 
                     if(res.won) {
-                        let rev = res.rev * mult;
-                        daily_pnl[i] += rev;
-                        tradeLog.rev = rev;
-                        tradeLog.net = rev - cost;
+                        daily_pnl[i] += res.rev;
+                        tradeLog.rev = res.rev;
+                        tradeLog.net = res.rev - cost;
                         tradeLog.won = true;
                         stats.wins++;
                     } else {
-                        if(p.step < 2) {
-                            next_active.push({comb: p.comb, step: p.step + 1});
-                        } else {
-                            stats.losses++;
-                        }
+                        stats.losses++;
                     }
                     dailyTrades.push(tradeLog);
-                }
-                active_pursuits = next_active;
-
-                // 2. Generate new signals for tomorrow
-                let isLastDraw = (i === simData.length - 1);
-                let newSignals = [];
-                
-                if(active_pursuits.length < CONFIG.MAX_CONCURRENT) {
-                    let prevBroken = this.getBrokenHeads(simData[i].numbers);
-                    let activeCombStrs = active_pursuits.map(p => `${p.comb[0]},${p.comb[1]}`);
-                    
-                    let candidates = [];
-                    for(let comb of CONFIG.COMBS) {
-                        if(activeCombStrs.includes(`${comb[0]},${comb[1]}`)) continue;
-                        
-                        let s = this.calcScore(simData, i, comb, prevBroken);
-                        if(s.total >= CONFIG.THRESHOLD) {
-                            candidates.push({comb, ...s});
-                        }
-                    }
-                    
-                    if(candidates.length > 0) {
-                        // Sort: score desc, drought desc
-                        candidates.sort((a,b) => {
-                            if(b.total !== a.total) return b.total - a.total;
-                            return b.dr - a.dr;
-                        });
-                        
-                        // Fill available slots
-                        let slots = CONFIG.MAX_CONCURRENT - active_pursuits.length;
-                        for(let k=0; k<Math.min(slots, candidates.length); k++) {
-                            let best = candidates[k];
-                            if(!isLastDraw) {
-                                active_pursuits.push({comb: best.comb, step: 0});
-                                stats.pursuits++;
-                            } else {
-                                // Save for prediction
-                                newSignals.push(best);
-                            }
-                        }
-                    }
                 }
 
                 historyLog.push({
@@ -484,11 +404,35 @@
                     trades: dailyTrades
                 });
 
-                if(isLastDraw) {
-                    AppState.latestPrediction = {
-                        active: active_pursuits,
-                        newSignals: newSignals
-                    };
+                // 2. 掃描產生明天的下注訊號
+                let isLastDraw = (i === simData.length - 1);
+                let prevBroken = this.getBrokenHeads(simData[i].numbers);
+                let candidates = [];
+                
+                for(let comb of CONFIG.COMBS) {
+                    let s = this.calcScore(simData, i, comb, prevBroken);
+                    if(s.total >= CONFIG.THRESHOLD) {
+                        candidates.push({
+                            comb: comb, 
+                            score: s.total, 
+                            dr: s.dr,
+                            details: `總分:${s.total} (槓+${s.base}|斷+${s.bonus}|趨${s.trend>0?'+':''}${s.trend})`
+                        });
+                    }
+                }
+                
+                // 雙核 PK 排序 (1.分數高 2.連槓久) -> 取前 2 名
+                candidates.sort((a,b) => {
+                    if(b.score !== a.score) return b.score - a.score;
+                    return b.dr - a.dr;
+                });
+                
+                pending_bets = candidates.slice(0, CONFIG.MAX_DAILY_SIGNALS);
+                
+                if(!isLastDraw) {
+                    stats.pursuits += pending_bets.length;
+                } else {
+                    AppState.latestSignals = pending_bets;
                 }
             }
 
@@ -531,47 +475,31 @@
             $('st-mdd').innerText = parseInt(res.stats.mdd).toLocaleString();
         },
         renderPrediction() {
-            if(!AppState.latestPrediction || !AppState.fullData.length) return;
-            const state = AppState.latestPrediction;
+            if(!AppState.fullData.length) return;
+            const signals = AppState.latestSignals || [];
             
             let html = "";
-            let slotsUsed = state.active.length;
             
-            // 1. Show Currently Active Pursuits
-            if(slotsUsed > 0) {
-                state.active.forEach(p => {
-                    let nextStep = p.step + 1;
-                    html += `
-                    <div class="priority-card active" style="border-left-color: var(--danger);">
-                        <span class="p-rank">🔥 追擊任務執行中 (即將進入第 ${nextStep} 局)</span>
-                        繼續買入 <b>${p.comb[0]}/${p.comb[1]}頭</b>，投入 <b>${CONFIG.MULTIPLIERS[p.step]} 倍</b>注碼。
-                    </div>`;
-                });
-            }
-
-            // 2. Show New Signals
-            if(state.newSignals.length > 0) {
-                state.newSignals.forEach(sig => {
+            if(signals.length > 0) {
+                signals.forEach((sig, index) => {
                     html += `
                     <div class="priority-card active">
-                        <span class="p-rank">🎯 滿分進場：${sig.comb[0]}/${sig.comb[1]}頭 (總分: ${sig.total})</span>
-                        <div style="margin-bottom:8px;">基礎分: +${sig.base} | 斷牌加權: +${sig.bonus} | 均值調節: ${sig.trend>0?'+':''}${sig.trend} <small>${sig.trendDesc}</small></div>
-                        <b style="color:var(--success);">系統指令：次期啟動 1-3-8 追擊 (總備金準備 12,744)</b>
+                        <span class="p-rank">🎯 【核 ${index+1}】 強勢達標：${sig.comb[0]}/${sig.comb[1]}頭</span>
+                        <div style="margin-bottom:8px;">${sig.details}</div>
+                        <b style="color:var(--success);">系統指令：次期固定平注下單 1,062 元 (絕不倍投)</b>
                     </div>`;
                 });
             }
 
-            // 3. System Status Badge
-            let totalActiveNextDraw = slotsUsed + state.newSignals.length;
             let badgeClass = "badge-wait", badgeTxt = "空手觀望";
             let mainTxt = "無達標訊號";
             let descTxt = "等待組合進入超賣或黃金交叉點...";
 
-            if(totalActiveNextDraw > 0) {
-                badgeClass = totalActiveNextDraw === CONFIG.MAX_CONCURRENT ? "badge-lock" : "badge-pursuit";
-                badgeTxt = totalActiveNextDraw === CONFIG.MAX_CONCURRENT ? "系統滿載 (鎖倉中)" : "訊號觸發";
+            if(signals.length > 0) {
+                badgeClass = "badge-pursuit";
+                badgeTxt = "進場訊號確認";
                 mainTxt = "準備下注";
-                descTxt = `目前佔用 ${totalActiveNextDraw}/${CONFIG.MAX_CONCURRENT} 個執行緒。請依據下方指令行動。`;
+                descTxt = `明日預計總投入成本：${signals.length * CONFIG.FLAT_COST} 元。請依據下方指令平注進場。`;
             }
 
             $('pred-badge').className = `sig-badge ${badgeClass}`;
@@ -587,7 +515,7 @@
         },
         renderTable() {
             const t = $('fullHistoryBody'); t.innerHTML = '';
-            // Filter to only show days where trades happened
+            // Only show days with trades
             const tradedHistory = AppState.history.filter(x => x.trades && x.trades.length > 0);
             const start = (AppState.page-1)*15, end = Math.min(start+15, tradedHistory.length);
             $('pageInfo').innerText = `第 ${AppState.page} 頁 / 共 ${Math.ceil(tradedHistory.length/15) || 1} 頁`;
@@ -597,17 +525,15 @@
                 let balls = row.nums.map(n => `<span class="num-ball">${n<10?'0'+n:n}</span>`).join('');
                 
                 let tradeHtmls = row.trades.map(tr => {
-                    let sigTxt = `<span style="color:#cbd5e1">3D 達標進場</span>`;
-                    let stratTxt = `${tr.combStr}頭 <small style="color:${tr.step>=2?'#fca5a5':'#64748b'}">(第${tr.step+1}局 x${tr.mult})</small>`;
-                    let resTxt = `<span class="res-badge ${tr.won?'badge-win':'badge-loss'}">${tr.won?'停利了結':'未中 / 續追'}</span>`;
-                    if(!tr.won && tr.step === 2) resTxt = `<span class="res-badge badge-loss" style="background:#ef4444; color:white;">斷頭停損</span>`;
+                    let sigTxt = `<b>${tr.combStr}</b>`;
+                    let resTxt = `<span class="res-badge ${tr.won?'badge-win':'badge-loss'}">${tr.won?'停利了結':'未中 / 認賠'}</span>`;
                     
                     return `
                         <tr>
                             <td style="color:#94a3b8">${row.date.slice(5)}</td>
                             <td>${balls}</td>
                             <td>${sigTxt}</td>
-                            <td>${stratTxt}</td>
+                            <td style="color:#64748b; font-size:12px;">${tr.details}</td>
                             <td style="font-weight:bold; color:${tr.net>0?'#34d399':'#f87171'}">${tr.net>0?'+':''}${parseInt(tr.net)}</td>
                             <td>${resTxt}</td>
                         </tr>
